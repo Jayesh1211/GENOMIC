@@ -1,15 +1,29 @@
+import os
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from genomic_benchmarks.dataset_getters.pytorch_datasets import DemoCodingVsIntergenomicSeqs
 
-# Load pretrained model
-MODEL_PATH = "Best_Pick_Weighted_Averaging_final_model.h5"  # Update with actual path if different
+# Ensure we are running on CPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+# Load pretrained model safely
+MODEL_PATH = "Best_Pick_Weighted_Averaging_final_model.h5"
+if not os.path.exists(MODEL_PATH):
+    st.error(f"🚨 Model file not found at: {MODEL_PATH}")
+    st.stop()
+
+st.write("✅ Model file found. Loading...")
 model = tf.keras.models.load_model(MODEL_PATH)
 
-# Load test dataset
-test_set = DemoCodingVsIntergenomicSeqs(split='test', version=0)
+# Load test dataset safely
+try:
+    test_set = DemoCodingVsIntergenomicSeqs(split='test', version=0)
+except Exception as e:
+    st.error("🚨 Failed to load genomic dataset! Make sure 'genomic-benchmarks' is installed.")
+    st.stop()
 
+# Preprocessing function
 def preprocess_text(text, word_size=50):
     word_combinations = {}
     iteration = 1
@@ -39,4 +53,3 @@ predicted_class = np.argmax(prediction)
 st.write(f"### Actual Label: {label}")
 st.write(f"### Predicted Label: {predicted_class}")
 st.bar_chart(prediction.flatten())
-
