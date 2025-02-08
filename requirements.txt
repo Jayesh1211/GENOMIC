@@ -1,0 +1,13 @@
+streamlit
+tensorflow
+numpy
+pandas
+scikit-learn
+torch
+torchvision
+torchaudio
+genomic-benchmarks
+qiskit
+qiskit-machine-learning
+qiskit-algorithms
+qiskit-aer
