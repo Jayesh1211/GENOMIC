@@ -4,7 +4,7 @@ import numpy as np
 from genomic_benchmarks.dataset_getters.pytorch_datasets import DemoCodingVsIntergenomicSeqs
 
 # Load pretrained model
-MODEL_PATH = "pretrained_model.h5"  # Update with actual path if different
+MODEL_PATH = "Best_Pick_Weighted_Averaging_final_model.h5"  # Update with actual path if different
 model = tf.keras.models.load_model(MODEL_PATH)
 
 # Load test dataset
