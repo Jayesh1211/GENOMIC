@@ -11,3 +11,4 @@ qiskit
 qiskit-machine-learning
 qiskit-algorithms
 qiskit-aer
+h5py
