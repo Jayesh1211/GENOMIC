@@ -14,8 +14,9 @@ from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_sc
 
 # Load and preprocess data
 def load_data():
-    test_set = DemoCodingVsIntergenomicSeqs(split='test', version=0)
-    train_set = DemoCodingVsIntergenomicSeqs(split='train', version=0)
+    # Force download the dataset
+    test_set = DemoCodingVsIntergenomicSeqs(split='test', version=0, force_download=True)
+    train_set = DemoCodingVsIntergenomicSeqs(split='train', version=0, force_download=True)
     data_set = train_set + test_set
     return data_set
 
@@ -94,7 +95,7 @@ def weighted_average(epoch_results):
 
 # Streamlit interface
 st.title("Genomic Benchmarking with Qiskit")
-st.sidebar.header("User  Input")
+st.sidebar.header("User   Input")
 
 # Load data
 data_set = load_data()
