@@ -90,6 +90,34 @@ def split_data(np_data_set, train_size=750, test_size=250):  # Reduced sizes for
 
 np_train_data, np_test_data = split_data(np_data_set)
 
+# Convert labels to binary format (if necessary)
+def convert_labels_to_binary(np_data):
+    for data_point in np_data:
+        if data_point["label"] == "negative":
+            data_point["label"] = 0
+        elif data_point["label"] == "positive":
+            data_point["label"] = 1
+    return np_data
+
+# Convert labels in training and test sets
+np_train_data = convert_labels_to_binary(np_train_data)
+np_test_data = convert_labels_to_binary(np_test_data)
+
+# Extract sequences and labels
+train_sequences = np.array([data_point["sequence"] for data_point in np_train_data])
+train_labels = np.array([data_point["label"] for data_point in np_train_data])
+test_sequences = np.array([data_point["sequence"] for data_point in np_test_data])
+test_labels = np.array([data_point["label"] for data_point in np_test_data])
+
+# Ensure labels are 1D arrays
+train_labels = train_labels.ravel()
+test_labels = test_labels.ravel()
+
+# Print shapes for debugging
+st.write(f"Train sequences shape: {train_sequences.shape}")
+st.write(f"Train labels shape: {train_labels.shape}")
+st.write(f"Test sequences shape: {test_sequences.shape}")
+st.write(f"Test labels shape: {test_labels.shape}")
 
 # Define Client Class
 class Client:
