@@ -28,7 +28,9 @@ def load_data():
 
 data_set, train_set, test_set = load_data()
 
-# Reduce Dataset Size for Testing
+
+# Convert dataset to list before slicing
+data_set = list(data_set)  # Ensure it's a list
 st.write(f"Original dataset size: {len(data_set)}")
 data_set = data_set[:1000]  # Use only the first 1000 sequences for testing
 st.write(f"Reduced dataset size: {len(data_set)}")
