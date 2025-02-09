@@ -29,7 +29,7 @@ def load_data():
 data_set, train_set, test_set = load_data()
 
 # Preprocess Data (No Caching)
-def preprocess_data(_data_set, word_size=50):
+def preprocess_data(_data_set, word_size=125):
     st.write("Preprocessing data...")
     progress_bar = st.progress(0)
     status_text = st.empty()
