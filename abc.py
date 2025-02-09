@@ -1,9 +1,13 @@
+# -*- coding: utf-8 -*-
+# Disable Streamlit file watcher for torch
+import os
+os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
+
 import streamlit as st
 from streamlit.web.server import Server
 
-# Disable file watcher for torch
-import os
-os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
+# Disable torch class inspection
+Server.get_current()._session_state._set_watcher_ignore_modules(["torch"])
 
 # Rest of your imports
 import numpy as np
@@ -15,7 +19,6 @@ from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
 from qiskit_algorithms.optimizers import COBYLA
 from qiskit_machine_learning.algorithms.classifiers import VQC
 from qiskit.primitives import BackendSampler
-from functools import partial
 from qiskit.providers.basic_provider import BasicProvider
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 from torch.utils.data import Subset
@@ -25,7 +28,7 @@ st.title("Federated Quantum Machine Learning (Genomic Data)")
 st.write("This app simulates federated learning with a quantum model.")
 
 # Load Dataset (Cached for Performance)
-@st.cache_resource  # <-- Use cache_resource
+@st.cache_resource
 def load_data():
     info("human_enhancers_cohn", version=0)
     test_set = HumanEnhancersCohn(split='test', version=0)
@@ -90,34 +93,22 @@ def split_data(np_data_set, train_size=750, test_size=250):  # Reduced sizes for
 
 np_train_data, np_test_data = split_data(np_data_set)
 
-# Convert labels to binary format (if necessary)
-def convert_labels_to_binary(np_data):
-    for data_point in np_data:
-        if data_point["label"] == "negative":
-            data_point["label"] = 0
-        elif data_point["label"] == "positive":
-            data_point["label"] = 1
-    return np_data
+# Convert labels to integers and ensure 1D shape
+def prepare_datasets(np_train_data, np_test_data):
+    train_labels = np.array([int(d["label"]) for d in np_train_data]).ravel()
+    test_labels = np.array([int(d["label"]) for d in np_test_data]).ravel()
+    
+    train_sequences = np.array([d["sequence"] for d in np_train_data])
+    test_sequences = np.array([d["sequence"] for d in np_test_data])
+    
+    # Verify output shapes
+    st.write(f"Train sequences shape: {train_sequences.shape}")
+    st.write(f"Train labels shape: {train_labels.shape}")
+    st.write(f"Unique labels: {np.unique(train_labels)}")
+    
+    return train_sequences, train_labels, test_sequences, test_labels
 
-# Convert labels in training and test sets
-np_train_data = convert_labels_to_binary(np_train_data)
-np_test_data = convert_labels_to_binary(np_test_data)
-
-# Extract sequences and labels
-train_sequences = np.array([data_point["sequence"] for data_point in np_train_data])
-train_labels = np.array([data_point["label"] for data_point in np_train_data])
-test_sequences = np.array([data_point["sequence"] for data_point in np_test_data])
-test_labels = np.array([data_point["label"] for data_point in np_test_data])
-
-# Ensure labels are 1D arrays
-train_labels = train_labels.ravel()
-test_labels = test_labels.ravel()
-
-# Print shapes for debugging
-st.write(f"Train sequences shape: {train_sequences.shape}")
-st.write(f"Train labels shape: {train_labels.shape}")
-st.write(f"Test sequences shape: {test_sequences.shape}")
-st.write(f"Test labels shape: {test_labels.shape}")
+train_sequences, train_labels, test_sequences, test_labels = prepare_datasets(np_train_data, np_test_data)
 
 # Define Client Class
 class Client:
@@ -164,66 +155,56 @@ def calculate_weighted_average(model_weights, fl_avg_weights):
         weighted_sum_weights.append(0)
         weighted_sum_weights[index] = sum([(weights_array[index] * avg_weight) for weights_array, avg_weight in zip(model_weights, fl_avg_weights)]) / sum(fl_avg_weights)
     return weighted_sum_weights
-    
-    
-def weighted_average(epoch_results, global_model_weights_last_epoch = None, global_model_accuracy_last_epoch = None):
-  if(global_model_weights_last_epoch != None):
-    epoch_results['weights'].append(global_model_weights_last_epoch)
-    epoch_results['test_scores'].append(global_model_accuracy_last_epoch)
-  epoch_results = sort_epoch_results(epoch_results)
-  epoch_results = scale_test_scores(epoch_results)
-  print(epoch_results)
-  weighted_average_weights_curr_epoch = calculate_weighted_average(epoch_results['weights'], epoch_results['fl_avg_weights'])
-  return weighted_average_weights_curr_epoch
 
+def weighted_average(epoch_results, global_model_weights_last_epoch=None, global_model_accuracy_last_epoch=None):
+    if global_model_weights_last_epoch is not None:
+        epoch_results['weights'].append(global_model_weights_last_epoch)
+        epoch_results['test_scores'].append(global_model_accuracy_last_epoch)
+    epoch_results = sort_epoch_results(epoch_results)
+    epoch_results = scale_test_scores(epoch_results)
+    weighted_average_weights_curr_epoch = calculate_weighted_average(epoch_results['weights'], epoch_results['fl_avg_weights'])
+    return weighted_average_weights_curr_epoch
 
+def weighted_average_best_pick(epoch_results, global_model_weights_last_epoch=None, global_model_accuracy_last_epoch=None, best_pick_cutoff=0.5):
+    if global_model_weights_last_epoch is not None:
+        epoch_results['weights'].append(global_model_weights_last_epoch)
+        epoch_results['test_scores'].append(global_model_accuracy_last_epoch)
 
-def weighted_average_best_pick(epoch_results, global_model_weights_last_epoch = None, global_model_accuracy_last_epoch = None, best_pick_cutoff = 0.5):
-  if(global_model_weights_last_epoch != None):
-    epoch_results['weights'].append(global_model_weights_last_epoch)
-    epoch_results['test_scores'].append(global_model_accuracy_last_epoch)
+    epoch_results = sort_epoch_results(epoch_results)
+    epoch_results = scale_test_scores(epoch_results)
 
-  epoch_results = sort_epoch_results(epoch_results)
-  epoch_results = scale_test_scores(epoch_results)
+    new_weights = []
+    new_test_scores = []
+    new_fl_avg_weights = []
 
-  new_weights = []
-  new_test_scores = []
-  new_fl_avg_weights = []
+    for index, fl_avg_weight in enumerate(epoch_results['fl_avg_weights']):
+        if fl_avg_weight >= best_pick_cutoff:
+            new_weights.append(epoch_results['weights'][index])
+            new_test_scores.append(epoch_results['test_scores'][index])
+            new_fl_avg_weights.append(fl_avg_weight)
 
-  for index, fl_avg_weight in enumerate(epoch_results['fl_avg_weights']):
-      if fl_avg_weight >= best_pick_cutoff:
-          new_weights.append(epoch_results['weights'][index])
-          new_test_scores.append(epoch_results['test_scores'][index])
-          new_fl_avg_weights.append(fl_avg_weight)
+    epoch_results['weights'] = new_weights
+    epoch_results['test_scores'] = new_test_scores
+    epoch_results['fl_avg_weights'] = new_fl_avg_weights
 
-  # Update the epoch_results dictionary with the new lists
-  epoch_results['weights'] = new_weights
-  epoch_results['test_scores'] = new_test_scores
-  epoch_results['fl_avg_weights'] = new_fl_avg_weights
+    weighted_average_weights_curr_epoch = calculate_weighted_average(epoch_results['weights'], epoch_results['fl_avg_weights'])
+    return weighted_average_weights_curr_epoch
 
-  print(epoch_results)
-  weighted_average_weights_curr_epoch = calculate_weighted_average(epoch_results['weights'], epoch_results['fl_avg_weights'])
-  return weighted_average_weights_curr_epoch
+def simple_averaging(epoch_results, global_model_weights_last_epoch=None, global_model_accuracy_last_epoch=None):
+    if global_model_weights_last_epoch is not None:
+        epoch_results['weights'].append(global_model_weights_last_epoch)
+        epoch_results['test_scores'].append(global_model_accuracy_last_epoch)
 
-def simple_averaging(epoch_results, global_model_weights_last_epoch = None, global_model_accuracy_last_epoch = None):
-  if(global_model_weights_last_epoch != None):
-    epoch_results['weights'].append(global_model_weights_last_epoch)
-    epoch_results['test_scores'].append(global_model_accuracy_last_epoch)
+    epoch_weights = epoch_results['weights']
+    averages = []
+    for col in range(len(epoch_weights[0])):
+        col_sum = 0
+        for row in range(len(epoch_weights)):
+            col_sum += epoch_weights[row][col]
+        col_avg = col_sum / len(epoch_weights)
+        averages.append(col_avg)
 
-  epoch_weights = epoch_results['weights']
-  averages = []
-  # Iterate through the columns (i.e., elements at the same position) of the arrays
-  for col in range(len(epoch_weights[0])):
-      # Initialize a variable to store the sum of elements at the same position
-      col_sum = 0
-      for row in range(len(epoch_weights)):
-          col_sum += epoch_weights[row][col]
-
-      # Calculate the average for this column and append it to the averages list
-      col_avg = col_sum / len(epoch_weights)
-      averages.append(col_avg)
-
-  return averages
+    return averages
 
 # Streamlit Sidebar Parameters
 st.sidebar.header("Federated Learning Parameters")
@@ -235,29 +216,27 @@ aggregation_method = st.sidebar.selectbox("Aggregation Method", ["weighted_avera
 
 # Train Function with Callback
 def train(data, model=None):
+    # Extract sequences and labels
+    train_sequences = np.array([d["sequence"] for d in data])
+    train_labels = np.array([int(d["label"]) for d in data]).ravel()
+    
+    # Verify input dimensions
+    if len(train_sequences.shape) != 2:
+        st.error(f"Invalid sequence shape: {train_sequences.shape}. Expected 2D array.")
+        return None, None, None
+        
     if model is None:
-        num_features = len(data[0]["sequence"])
-        feature_map = ZZFeatureMap(feature_dimension=num_features, reps=1)
-        ansatz = RealAmplitudes(num_qubits=num_features, reps=3)
-        optimizer = COBYLA(maxiter=max_train_iterations)
-        vqc_model = VQC(
-            feature_map=feature_map,
-            ansatz=ansatz,
-            optimizer=optimizer,
-            sampler=BackendSampler(backend=BasicProvider().get_backend("basic_simulator")),
-            warm_start=True
-        )
-        model = vqc_model
-
-    train_sequences = [data_point["sequence"] for data_point in data]
-    train_labels = [data_point["label"] for data_point in data]
-    train_sequences = np.array(train_sequences)
-    train_labels = np.array(train_labels)
-
-    model.fit(train_sequences, train_labels)
-    train_score_q = model.score(train_sequences, train_labels)
-    test_score_q = model.score(test_sequences, test_labels)
-    return train_score_q, test_score_q, model
+        num_features = train_sequences.shape[1]
+        model = create_vqc(num_features)
+    
+    try:
+        model.fit(train_sequences, train_labels)
+        train_score = model.score(train_sequences, train_labels)
+        test_score = model.score(test_sequences, test_labels)
+        return train_score, test_score, model
+    except Exception as e:
+        st.error(f"Training failed: {str(e)}")
+        return None, None, None
 
 # Main Training Loop
 if st.sidebar.button("Start Federated Training"):
@@ -280,6 +259,8 @@ if st.sidebar.button("Start Federated Training"):
         for client in clients:
             client_data = client.data[epoch]
             train_score_q, test_score_q, model = train(client_data, client.primary_model)
+            if train_score_q is None:  # Skip if training failed
+                continue
             client.models.append(model)
             client.test_scores.append(test_score_q)
             client.train_scores.append(train_score_q)
@@ -295,14 +276,14 @@ if st.sidebar.button("Start Federated Training"):
         # Update clients with the new global model
         num_features = len(test_sequences[0])
         feature_map = ZZFeatureMap(feature_dimension=num_features, reps=1)
-        ansatz = RealAmplitudes(num_qubits=num_features, reps=3)
+        ansatz = RealAmplitudes(num_qubits=num_features, reps=1)
         optimizer = COBYLA(maxiter=max_train_iterations)
         global_model = VQC(
             feature_map=feature_map,
             ansatz=ansatz,
             optimizer=optimizer,
             sampler=BackendSampler(backend=BasicProvider().get_backend("basic_simulator")),
-            initial_point=ansatz.assign_parameters(weighted_avg_weights)
+            initial_point=weighted_avg_weights
         )
 
         for client in clients:
