@@ -2,7 +2,7 @@
 import streamlit as st
 import numpy as np
 from genomic_benchmarks.data_check import info
-from genomic_benchmarks.dataset_getters.pytorch_datasets import DemoCodingVsIntergenomicSeqs
+from genomic_benchmarks.dataset_getters.pytorch_datasets import HumanEnhancersCohn
 from collections import defaultdict
 from sklearn.preprocessing import MinMaxScaler
 from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
@@ -20,9 +20,9 @@ st.write("This app simulates federated learning with a quantum model.")
 # Load Dataset (Cached for Performance)
 @st.cache_data
 def load_data():
-    info("demo_coding_vs_intergenomic_seqs", version=0)
-    test_set = DemoCodingVsIntergenomicSeqs(split='test', version=0)
-    train_set = DemoCodingVsIntergenomicSeqs(split='train', version=0)
+    info("human_enhancers_cohn", version=0)
+    test_set = HumanEnhancersCohn(split='test', version=0)
+    train_set = HumanEnhancersCohn(split='train', version=0)
     data_set = train_set + test_set
     return data_set, train_set, test_set
 
