@@ -7,7 +7,7 @@ import streamlit as st
 from streamlit.web.server import Server
 
 # Disable torch class inspection
-Server.get_current()._session_state._set_watcher_ignore_modules(["torch"])
+#Server.get_current()._session_state._set_watcher_ignore_modules(["torch"])
 
 # Rest of your imports
 import numpy as np
