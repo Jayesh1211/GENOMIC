@@ -28,31 +28,43 @@ def load_data():
 
 data_set, train_set, test_set = load_data()
 
-# Preprocess Data (Cached for Performance)
-@st.cache_data
-def preprocess_data(_data_set, word_size=50):  # <-- Add leading underscore to `_data_set`
+# Preprocess Data (No Caching)
+def preprocess_data(_data_set, word_size=50):
+    st.write("Preprocessing data...")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
     word_combinations = defaultdict(int)
     iteration = 1
-    for text, _ in _data_set:  # <-- Use `_data_set` instead of `data_set`
+
+    # Step 1: Build word combinations
+    for idx, (text, _) in enumerate(_data_set):
         for i in range(len(text)):
             word = text[i:i+word_size]
             if word_combinations.get(word) is None:
                 word_combinations[word] = iteration
                 iteration += 1
+        progress_bar.progress((idx + 1) / len(_data_set))
+        status_text.text(f"Processing sequence {idx + 1}/{len(_data_set)}")
 
+    # Step 2: Encode sequences
     np_data_set = []
-    for i in range(len(_data_set)):
-        sequence, label = _data_set[i]
+    for idx in range(len(_data_set)):
+        sequence, label = _data_set[idx]
         sequence = sequence.strip()
         words = [sequence[i:i + word_size] for i in range(0, len(sequence), word_size)]
         int_sequence = np.array([word_combinations[word] for word in words])
         data_point = {'sequence': int_sequence, 'label': label}
         np_data_set.append(data_point)
+        progress_bar.progress((idx + 1) / len(_data_set))
+        status_text.text(f"Encoding sequence {idx + 1}/{len(_data_set)}")
 
     np.random.shuffle(np_data_set)
+    st.success("Preprocessing complete!")
     return np_data_set
 
-np_data_set = preprocess_data(data_set)  # Pass the original `data_set` here
+# Preprocess the data
+np_data_set = preprocess_data(data_set)
 
 # Split Data into Train and Test
 def split_data(np_data_set, train_size=75000, test_size=25000):
