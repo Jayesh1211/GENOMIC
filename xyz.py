@@ -34,9 +34,8 @@ def simple_averaging(epoch_results):
     epoch_weights = np.array(epoch_results['weights'])
     return np.mean(epoch_weights, axis=0)
 
-def train_vqc_model():
-    """Trains a Variational Quantum Classifier (VQC) and returns metrics."""
-    global_metrics = []
+def create_vqc_model(initial_weights=None):
+    """Creates a new VQC model with optional initial weights."""
     num_features = 4  # Assuming 4 features for simplicity
     feature_map = ZZFeatureMap(feature_dimension=num_features, reps=1)
     ansatz = RealAmplitudes(num_qubits=num_features, reps=3)
@@ -46,13 +45,20 @@ def train_vqc_model():
         feature_map=feature_map,
         ansatz=ansatz,
         optimizer=optimizer,
-        sampler=BackendSampler(backend=backend)
+        sampler=BackendSampler(backend=backend),
+        initial_point=initial_weights if initial_weights is not None else None
     )
+    return vqc_model
+
+def train_vqc_model():
+    """Trains a Variational Quantum Classifier (VQC) and returns metrics."""
+    global_metrics = []
+    vqc_model = create_vqc_model()
     
     # Simulated dataset
-    train_sequences = np.random.rand(100, num_features)
+    train_sequences = np.random.rand(100, 4)
     train_labels = np.random.randint(0, 2, 100)
-    test_sequences = np.random.rand(30, num_features)
+    test_sequences = np.random.rand(30, 4)
     test_labels = np.random.randint(0, 2, 30)
     
     epoch_results = {'weights': [], 'test_scores': []}
@@ -78,7 +84,8 @@ def train_vqc_model():
         else:
             new_weights = simple_averaging(epoch_results)
         
-        vqc_model.weights = new_weights
+        # Reinitialize model with new weights
+        vqc_model = create_vqc_model(initial_weights=new_weights)
         
         global_metrics.append((accuracy, precision, recall, f1))
         st.write(f"Epoch {epoch + 1}: Accuracy = {accuracy:.4f}, Precision = {precision:.4f}, Recall = {recall:.4f}, F1 Score = {f1:.4f}, Time = {end_time - start_time:.2f} sec")
