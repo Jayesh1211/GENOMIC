@@ -16,7 +16,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_sc
 # Streamlit App Title
 st.title("Federated Quantum Machine Learning (Genomic Data)")
 st.write("This app simulates federated learning with a quantum model.")
-
+'''
 # Load Dataset (Cached for Performance)
 @st.cache_data
 def load_data():
@@ -27,7 +27,17 @@ def load_data():
     return data_set, train_set, test_set
 
 data_set, train_set, test_set = load_data()
+'''
+@st.cache_data
+def load_data():
+    info("human_enhancers_cohn", version=0)
+    test_set = HumanEnhancersCohn(split='test', version=0)
+    train_set = HumanEnhancersCohn(split='train', version=0)
+    data_set = (train_set + test_set)[:500]  # Limit to 500 samples
+    return data_set, train_set, test_set
+data_set, train_set, test_set = load_data()
 
+'''
 # Preprocess Data (No Caching)
 def preprocess_data(_data_set, word_size=125):
     st.write("Preprocessing data...")
@@ -62,16 +72,56 @@ def preprocess_data(_data_set, word_size=125):
     np.random.shuffle(np_data_set)
     st.success("Preprocessing complete!")
     return np_data_set
+'''
 
+def preprocess_data(_data_set, word_size=125, max_samples=500):
+    st.write("Preprocessing data...")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    word_combinations = defaultdict(int)
+    iteration = 1
+
+    # Step 1: Build word combinations (limit the number of samples)
+    for idx, (text, _) in enumerate(_data_set[:max_samples]):  # Limit to max_samples
+        for i in range(len(text)):
+            word = text[i:i+word_size]
+            if word_combinations.get(word) is None:
+                word_combinations[word] = iteration
+                iteration += 1
+        progress_bar.progress((idx + 1) / len(_data_set[:max_samples]))
+        status_text.text(f"Processing sequence {idx + 1}/{len(_data_set[:max_samples])}")
+
+    # Step 2: Encode sequences (limit the number of samples)
+    np_data_set = []
+    for idx in range(len(_data_set[:max_samples])):  # Limit to max_samples
+        sequence, label = _data_set[idx]
+        sequence = sequence.strip()
+        words = [sequence[i:i + word_size] for i in range(0, len(sequence), word_size)]
+        int_sequence = np.array([word_combinations[word] for word in words])
+        data_point = {'sequence': int_sequence, 'label': label}
+        np_data_set.append(data_point)
+        progress_bar.progress((idx + 1) / len(_data_set[:max_samples]))
+        status_text.text(f"Encoding sequence {idx + 1}/{len(_data_set[:max_samples])}")
+
+    np.random.shuffle(np_data_set)
+    st.success("Preprocessing complete!")
+    return np_data_set
 # Preprocess the data
 np_data_set = preprocess_data(data_set)
-
+'''
 # Split Data into Train and Test
 def split_data(np_data_set, train_size=20843, test_size=6948):
     np_train_data = np_data_set[:train_size]
     np_test_data = np_data_set[-test_size:]
     return np_train_data, np_test_data
 
+np_train_data, np_test_data = split_data(np_data_set)
+'''
+def split_data(np_data_set, train_size=200, test_size=100):
+    np_train_data = np_data_set[:train_size]  # Limit to train_size
+    np_test_data = np_data_set[-test_size:]  # Limit to test_size
+    return np_train_data, np_test_data
 np_train_data, np_test_data = split_data(np_data_set)
 
 # Define Client Class
