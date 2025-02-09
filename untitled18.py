@@ -67,7 +67,7 @@ def preprocess_data(_data_set, word_size=125):
 np_data_set = preprocess_data(data_set)
 
 # Split Data into Train and Test
-def split_data(np_data_set, train_size=75000, test_size=25000):
+def split_data(np_data_set, train_size=20843, test_size=6948):
     np_train_data = np_data_set[:train_size]
     np_test_data = np_data_set[-test_size:]
     return np_train_data, np_test_data
