@@ -29,6 +29,7 @@ def load_data():
 data_set, train_set, test_set = load_data()
 
 # Preprocess Data (Cached for Performance)
+'''
 @st.cache_data
 def preprocess_data(data_set, word_size=50):
     word_combinations = defaultdict(int)
@@ -43,6 +44,29 @@ def preprocess_data(data_set, word_size=50):
     np_data_set = []
     for i in range(len(data_set)):
         sequence, label = data_set[i]
+        sequence = sequence.strip()
+        words = [sequence[i:i + word_size] for i in range(0, len(sequence), word_size)]
+        int_sequence = np.array([word_combinations[word] for word in words])
+        data_point = {'sequence': int_sequence, 'label': label}
+        np_data_set.append(data_point)
+
+    np.random.shuffle(np_data_set)
+    return np_data_set
+'''
+@st.cache_data
+def preprocess_data(_data_set, word_size=50):  # Add an underscore before 'data_set'
+    word_combinations = defaultdict(int)
+    iteration = 1
+    for text, _ in _data_set:  # Use _data_set instead of data_set
+        for i in range(len(text)):
+            word = text[i:i+word_size]
+            if word_combinations.get(word) is None:
+                word_combinations[word] = iteration
+                iteration += 1
+
+    np_data_set = []
+    for i in range(len(_data_set)):  # Use _data_set instead of data_set
+        sequence, label = _data_set[i]
         sequence = sequence.strip()
         words = [sequence[i:i + word_size] for i in range(0, len(sequence), word_size)]
         int_sequence = np.array([word_combinations[word] for word in words])
