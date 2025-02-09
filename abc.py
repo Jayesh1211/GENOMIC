@@ -2,7 +2,8 @@ import streamlit as st
 from streamlit.web.server import Server
 
 # Disable file watcher for torch
-Server.get_current()._session_state._set_watcher_ignore_modules(["torch"])
+import os
+os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
 
 # Rest of your imports
 import numpy as np
@@ -273,7 +274,7 @@ if st.sidebar.button("Start Federated Training"):
             ansatz=ansatz,
             optimizer=optimizer,
             sampler=BackendSampler(backend=BasicProvider().get_backend("basic_simulator")),
-            initial_point=weighted_avg_weights
+            initial_point=ansatz.assign_parameters(weighted_avg_weights)
         )
 
         for client in clients:
