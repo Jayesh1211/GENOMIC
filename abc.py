@@ -1,5 +1,10 @@
-# -*- coding: utf-8 -*-
 import streamlit as st
+from streamlit.web.server import Server
+
+# Disable file watcher for torch
+Server.get_current()._session_state._set_watcher_ignore_modules(["torch"])
+
+# Rest of your imports
 import numpy as np
 from genomic_benchmarks.data_check import info
 from genomic_benchmarks.dataset_getters.pytorch_datasets import HumanEnhancersCohn
@@ -12,15 +17,14 @@ from qiskit.primitives import BackendSampler
 from functools import partial
 from qiskit.providers.basic_provider import BasicProvider
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
-from torch.utils.data import Subset  # <-- Add this import
-
+from torch.utils.data import Subset
 
 # Streamlit App Title
 st.title("Federated Quantum Machine Learning (Genomic Data)")
 st.write("This app simulates federated learning with a quantum model.")
 
 # Load Dataset (Cached for Performance)
-@st.cache_data
+@st.cache_resource  # <-- Use cache_resource
 def load_data():
     info("human_enhancers_cohn", version=0)
     test_set = HumanEnhancersCohn(split='test', version=0)
