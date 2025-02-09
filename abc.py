@@ -12,6 +12,8 @@ from qiskit.primitives import BackendSampler
 from functools import partial
 from qiskit.providers.basic_provider import BasicProvider
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
+from torch.utils.data import Subset  # <-- Add this import
+
 
 # Streamlit App Title
 st.title("Federated Quantum Machine Learning (Genomic Data)")
@@ -28,11 +30,13 @@ def load_data():
 
 data_set, train_set, test_set = load_data()
 
-
-# Convert dataset to list before slicing
-data_set = list(data_set)  # Ensure it's a list
+# Reduce Dataset Size for Testing using proper Subset
 st.write(f"Original dataset size: {len(data_set)}")
-data_set = data_set[:1000]  # Use only the first 1000 sequences for testing
+
+# Create indices for subset
+subset_indices = list(range(1000))  # First 1000 samples
+data_set = Subset(data_set, subset_indices)  # <-- Proper way to subset
+
 st.write(f"Reduced dataset size: {len(data_set)}")
 
 # Preprocess Data (No Caching)
