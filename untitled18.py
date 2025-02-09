@@ -31,8 +31,8 @@ data_set, train_set, test_set = load_data()
 @st.cache_data
 def load_data():
     info("human_enhancers_cohn", version=0)
-    test_set = HumanEnhancersCohn(split='test', version=0)
-    train_set = HumanEnhancersCohn(split='train', version=0)
+    test_set = list(HumanEnhancersCohn(split='test', version=0))
+    train_set = list(HumanEnhancersCohn(split='train', version=0))
     data_set = (train_set + test_set)[:500]  # Limit to 500 samples
     return data_set, train_set, test_set
 data_set, train_set, test_set = load_data()
