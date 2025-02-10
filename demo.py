@@ -395,3 +395,9 @@ if uploaded_file is not None:
 
 else:
     st.warning("Please upload a preprocessed CSV file to begin training.")
+
+st.markdown("### Details  \n"
+            "**Number of Clients**: Defines how many clients participate in the Federated Learning process, each contributing to model training.  \n"
+            "**Number of Epochs**: Specifies how many times the entire dataset is processed by each client during training.  \n"
+            "**Max Training Iterations**: Sets the upper limit on the number of optimization steps each client performs per training round.  \n"
+            "**Samples per Epoch**: Determines how many data samples each client processes in a single epoch.")
