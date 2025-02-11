@@ -28,6 +28,10 @@ warnings.simplefilter("ignore", FutureWarning)
 st.set_page_config(page_title="Quantum Federated Learning", layout="wide")
 st.title("Quantum Federated Learning Dashboard")
 
+# Dataset selector
+st.sidebar.header("Data Source")
+data_source = st.sidebar.radio("Select Data Source", ["Upload File", "Use Predefined Dataset"])
+
 # Debug mode toggle
 debug_mode = st.sidebar.checkbox("Enable Debug Mode", value=False)
 
@@ -47,12 +51,44 @@ aggregation_technique = st.sidebar.selectbox(
     ["Simple Averaging", "Weighted Averaging", "Best Pick Weighted Averaging"]
 )
 
-# File uploader
-uploaded_file = st.file_uploader("Upload preprocessed CSV file", type=['csv'])
+# Data loading section
+if data_source == "Use Predefined Dataset":
+    # Predefined datasets
+    dataset_options = {
+        "Coding vs Intergenic Sequences": "DemoCodingVsIntergenomicSeqs_scaled.csv",
+        "Human or Worm Classification": "DemoHumanOrWorm_scaled.csv",
+        "Human Enhancers (Cohn)": "HumanEnhancersCohn_scaled.csv",
+        "Human Enhancers (Ensembl)": "HumanEnhancersEnsembl_scaled.csv",
+        "Human Non-TATA Promoters": "HumanNontataPromoters_scaled.csv",
+        "Human OCR Ensembl": "HumanOcrEnsembl_scaled.csv"
+    }
+    
+    selected_dataset = st.sidebar.selectbox(
+        "Select Dataset",
+        list(dataset_options.keys())
+    )
+    
+    try:
+        # Load the selected dataset
+        df_preprocessed = pd.read_csv(dataset_options[selected_dataset])
+        st.success(f"Successfully loaded {selected_dataset}")
+        proceed_with_training = True
+        
+    except Exception as e:
+        st.error(f"Error loading dataset: {str(e)}")
+        proceed_with_training = False
 
-if uploaded_file is not None:
-    df_preprocessed = pd.read_csv(uploaded_file)
+else:
+    # File uploader
+    uploaded_file = st.file_uploader("Upload preprocessed CSV file", type=['csv'])
+    if uploaded_file is not None:
+        df_preprocessed = pd.read_csv(uploaded_file)
+        proceed_with_training = True
+    else:
+        st.warning("Please upload a preprocessed CSV file to begin training.")
+        proceed_with_training = False
 
+if proceed_with_training:
     # Data preprocessing
     @st.cache_data
     def preprocess_data(df):
@@ -64,6 +100,7 @@ if uploaded_file is not None:
     with st.spinner("Processing data..."):
         np_data_set = preprocess_data(df_preprocessed)
 
+    # [Rest of your existing code remains exactly the same, starting from Data splitting...]
     # Data splitting
     train_size = int(len(np_data_set) * 0.75)
     np_train_data = np_data_set[:train_size]
