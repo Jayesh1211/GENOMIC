@@ -440,3 +440,6 @@ st.markdown("""
 - **Max Training Iterations**: Sets the upper limit on the number of optimization steps each client performs per training round.  
 - **Samples per Epoch**: Determines how many data samples each client processes in a single epoch.  
 """)
+
+# Display result image
+st.image("Screenshot from 2025-03-15 10-23-00.png", caption="Result", use_column_width=True)
