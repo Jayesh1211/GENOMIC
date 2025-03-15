@@ -442,4 +442,4 @@ st.markdown("""
 """)
 
 # Display result image
-st.image("Screenshot from 2025-03-15 10-23-00.png", caption="Result", use_column_width=True)
+st.image("Screenshot from 2025-03-15 10-23-00.png", caption="Result", use_container_width=True)
